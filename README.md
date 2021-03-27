@@ -7,7 +7,7 @@ Autonomous navigation in unknown environment with moving obstacles and only LiDA
 3) `cd safety-starter-agents/scripts`
 4) To train the main arg we need to set is --robot 'car', so run `python experiment_modified.py --robot 'car' --exp_name 'first_test'` . This will train and save the model in a new data folder in safety-starter-agents.
 
-## To train a trained model
+## To run a trained model
 1) Trained models are saved in the data folder, under a subfolder for one experiment. 
 2) Run `python test_policy.py ../data/2021-03-24_ppo_PointGoal1/2021-03-24_18-12-16-ppo_PointGoal1_s10` to run the trained model.
 
