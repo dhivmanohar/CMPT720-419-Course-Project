@@ -43,7 +43,6 @@ def create_custom_env(env_name):
     register(id='SafexpTestEnvironment-v0',
              entry_point='safety_gym.envs.mujoco:Engine',
              kwargs={'config': config})
-    env.action_space = gym.spaces.Box(low=np.array([-1.0, 0]) ,high=np.array([1.0, 0.01]))
 
     return env
 
