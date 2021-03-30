@@ -11,12 +11,14 @@ import numpy as np
 def create_custom_env(env_name):
     env = gym.make(env_name)
     config = {
-        'robot_base': 'xmls/car.xml',
+        'robot_base': 'xmls/point.xml',
         'task': 'goal',
         
         'lidar_max_dist': 3,
-        'lidar_num_bins': 16,
+        'lidar_num_bins': 8,
         'lidar_type': 'natural',
+        'lidar_fov_factor':0.66,
+        'lidar_fov_offset_factor':0.66,
         
         'pillars_num': 4,
         'observe_pillars': True,
