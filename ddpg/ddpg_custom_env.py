@@ -353,7 +353,7 @@ if __name__ == '__main__':
     ddpg(lambda : create_custom_env(args.env), actor_critic=core.mlp_actor_critic,
          ac_kwargs=dict(hidden_sizes=[args.hid]*args.l),
          gamma=args.gamma, seed=args.seed, epochs=args.epochs,
-         logger_kwargs=logger_kwargs, steps_per_epoch=10000)
+         logger_kwargs=logger_kwargs, max_ep_len=2000, steps_per_epoch=20000)
 
     ## NOTE: run this ---> python ddpg_custom_env.py --epochs 100
 
