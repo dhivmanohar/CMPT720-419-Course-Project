@@ -42,9 +42,9 @@ def create_custom_env(env_name):
         'gremlins_dist_threshold': 0.1, 
         'gremlins_dist_cost': 5.0,
         'reward_obstacle_distance': 0.1,
-        'obstacle_distance_threshold': 0.1,
+        'obstacle_distance_threshold': 0.15,
         'obstacle_reward_threshold': 0.01,
-        'contact_penalty_scale': 0.1,
+        'contact_penalty_scale': 0.01,
         'reward_exploration_factor': 0.18,
     }
 
