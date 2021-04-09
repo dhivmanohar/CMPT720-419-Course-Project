@@ -338,6 +338,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.last_least_obstacle_distance = self.obstacle_distance_threshold + 1.0
         self.obstacle_groups = [GROUP_WALL, GROUP_PILLAR, GROUP_HAZARD, GROUP_VASE, GROUP_GREMLIN]
         self.distance_to_random_goal = -1.0
+        self.goal_not_seen = False
 
     def parse(self, config):
         ''' Parse a config dict - see self.DEFAULT for description '''
@@ -1022,11 +1023,14 @@ class Engine(gym.Env, gym.utils.EzPickle):
 
         if group == GROUP_GOAL:
             if np.all(obs == np.zeros(self.lidar_num_bins)):
+                self.goal_not_seen = True
                 curr_pos = self.world.robot_pos()
                 goal_pos = self.goal_pos
                 random_n = np.random.rand()
                 random_pos = goal_pos - np.array([random_n, -random_n, random_n])
                 self.distance_to_random_goal = self.dist_xy(random_pos)
+            else:
+                self.goal_not_seen = False
 
         return obs
 
@@ -1403,7 +1407,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 reward += min(self.reward_obstacle_distance * np.tanh(delta_distance), self.obstacle_reward_threshold)
         # New reward for exploration
         if self.reward_exploration:
-            if self.task in ['goal', 'button'] and self.distance_to_random_goal >= 0.0:
+            if self.task in ['goal', 'button'] and self.goal_not_seen:
                 reward -= self.distance_to_random_goal * self.reward_exploration_factor
         # Penalize contact with obstacles
         if self.penalize_contact:
