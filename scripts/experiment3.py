@@ -18,7 +18,7 @@ def create_custom_env(env_name):
         'lidar_num_bins': 8,
         'lidar_type': 'natural',
         'lidar_fov_factor':0.66,
-        'lidar_fov_offset_factor':0.66,
+        'lidar_fov_offset_factor':0.166,
         
         'pillars_num': 4,
         'observe_pillars': True,

@@ -10,14 +10,14 @@ import numpy as np
 def create_custom_env(env_name):
     env = gym.make(env_name)
     config = {
-        'robot_base': 'xmls/car.xml',
+        'robot_base': 'xmls/car.xml', ## TODO: change this to right xml file
         'task': 'goal',
         
         'lidar_max_dist': 3,
         'lidar_num_bins': 8,
         'lidar_type': 'natural',
         'lidar_fov_factor':0.66,
-        'lidar_fov_offset_factor':0.166,
+        'lidar_fov_offset_factor':0.166, ## TODO: change this to appropriate value
         
         'pillars_num': 4,
         'observe_pillars': True,
@@ -30,13 +30,22 @@ def create_custom_env(env_name):
         
         'constrain_indicator': False,
         'observe_goal_lidar': True,
-
+        
         'reward_distance': 10.0,
         'reward_goal': 100.0,
+        'observe_obstacle_distance': True,
+        'reward_exploration': True,
+        'penalize_contact': True,
+
         'pillars_cost': 10.0, 
         'gremlins_contact_cost': 10.0,
         'gremlins_dist_threshold': 0.1, 
         'gremlins_dist_cost': 5.0,
+        'reward_obstacle_distance': 0.1,
+        'obstacle_distance_threshold': 0.1,
+        'obstacle_reward_threshold': 0.01,
+        'contact_penalty_scale': 0.1,
+        'reward_exploration_factor': 0.18,
     }
 
     env = Engine(config)
@@ -66,7 +75,7 @@ def main(robot, task, algo, seed, exp_name, cpu):
     else:
         # num_steps = 1e7
         # steps_per_epoch = 30000
-        num_steps = 2e6
+        num_steps = 4e6
         steps_per_epoch = 2e4
 
     epochs = int(num_steps / steps_per_epoch)
