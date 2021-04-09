@@ -1405,12 +1405,14 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 # delta_distance will be negative if the agent has moved closer to obstacle(s)
                 delta_distance = self.curr_least_obstacle_distance - self.last_least_obstacle_distance
                 reward += min(self.reward_obstacle_distance * np.tanh(delta_distance), self.obstacle_reward_threshold)
+                # reward += self.reward_obstacle_distance * np.tanh(delta_distance)
         # New reward for exploration
         if self.reward_exploration:
             if self.task in ['goal', 'button'] and self.goal_not_seen:
                 reward -= self.distance_to_random_goal * self.reward_exploration_factor
         # Penalize contact with obstacles
         if self.penalize_contact:
+            buttons_constraints_active = self.constrain_buttons and (self.buttons_timer == 0)
             for contact in self.data.contact[:self.data.ncon]:
                 geom_ids = [contact.geom1, contact.geom2]
                 geom_names = sorted([self.model.geom_id2name(g) for g in geom_ids])
