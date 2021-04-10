@@ -31,21 +31,30 @@ def create_custom_env(env_name):
         'constrain_indicator': False,
         'observe_goal_lidar': True,
         
+        ## Default rewards
         'reward_distance': 10.0,
         'reward_goal': 100.0,
-        'observe_obstacle_distance': True,
-        'reward_exploration': True,
-        'penalize_contact': True,
 
+        ## Default costs
         'pillars_cost': 10.0, 
         'gremlins_contact_cost': 10.0,
         'gremlins_dist_threshold': 0.1, 
         'gremlins_dist_cost': 5.0,
+
+        ## New reward flags
+        'observe_obstacle_distance': True,
+        'reward_exploration': True,
+        'penalize_contact': False,
+        'avoid_pillar_in_view': True, ## TODO: Change this
+
+        ## New reward parameters
         'reward_obstacle_distance': 0.1,
-        'obstacle_distance_threshold': 0.15,
+        'obstacle_distance_threshold': 0.15, ## TODO: Change this to whatever is best
         'obstacle_reward_threshold': 0.01,
         'contact_penalty_scale': 0.01,
         'reward_exploration_factor': 0.18,
+        'pillar_distance_threshold': 5.0,
+        'reward_pillar_avoidance': 0.2,
     }
 
     env = Engine(config)

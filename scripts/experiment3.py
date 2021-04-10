@@ -11,14 +11,14 @@ import numpy as np
 def create_custom_env(env_name):
     env = gym.make(env_name)
     config = {
-        'robot_base': 'xmls/point.xml',
+        'robot_base': 'xmls/dubins_car.xml', ## TODO: change this to right xml file
         'task': 'goal',
         
         'lidar_max_dist': 3,
         'lidar_num_bins': 8,
         'lidar_type': 'natural',
         'lidar_fov_factor':0.66,
-        'lidar_fov_offset_factor':0.166,
+        'lidar_fov_offset_factor':1.166, ## TODO: change this to appropriate value
         
         'pillars_num': 4,
         'observe_pillars': True,
@@ -30,9 +30,13 @@ def create_custom_env(env_name):
         'constrain_gremlins': True,
         
         'constrain_indicator': False,
-
+        'observe_goal_lidar': True,
+        
+        ## Default rewards
         'reward_distance': 10.0,
         'reward_goal': 100.0,
+
+        ## Default costs
         'pillars_cost': 10.0, 
         'gremlins_contact_cost': 10.0,
         'gremlins_dist_threshold': 0.1, 
