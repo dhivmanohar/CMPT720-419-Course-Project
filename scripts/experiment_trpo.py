@@ -1,24 +1,23 @@
-#!/usr/bin/env python
+
 import gym 
 import safety_gym
 import safe_rl
 from safe_rl.utils.run_utils import setup_logger_kwargs
 from safe_rl.utils.mpi_tools import mpi_fork
-from gym.envs.registration import register
 from safety_gym.envs.engine import Engine
 import numpy as np
 
 def create_custom_env(env_name):
     env = gym.make(env_name)
     config = {
-        'robot_base': 'xmls/point.xml',
+        'robot_base': 'xmls/car.xml', ## TODO: change this to right xml file
         'task': 'goal',
         
         'lidar_max_dist': 3,
         'lidar_num_bins': 8,
         'lidar_type': 'natural',
         'lidar_fov_factor':0.66,
-        'lidar_fov_offset_factor':0.166,
+        'lidar_fov_offset_factor':0.166, ## TODO: change this to appropriate value
         
         'pillars_num': 4,
         'observe_pillars': True,
@@ -30,22 +29,29 @@ def create_custom_env(env_name):
         'constrain_gremlins': True,
         
         'constrain_indicator': False,
-
+        'observe_goal_lidar': True,
+        
         'reward_distance': 10.0,
         'reward_goal': 100.0,
+        'observe_obstacle_distance': True,
+        'reward_exploration': True,
+        'penalize_contact': True,
+
         'pillars_cost': 10.0, 
         'gremlins_contact_cost': 10.0,
         'gremlins_dist_threshold': 0.1, 
         'gremlins_dist_cost': 5.0,
+        'reward_obstacle_distance': 0.1,
+        'obstacle_distance_threshold': 0.15,
+        'obstacle_reward_threshold': 0.01,
+        'contact_penalty_scale': 0.01,
+        'reward_exploration_factor': 0.18,
     }
 
     env = Engine(config)
-    register(id='SafexpTestEnvironment-v0',
-             entry_point='safety_gym.envs.mujoco:Engine',
-             kwargs={'config': config})
+    # env.action_space = gym.spaces.Discrete(3)
 
     return env
-
 
 def main(robot, task, algo, seed, exp_name, cpu):
 
@@ -69,8 +75,9 @@ def main(robot, task, algo, seed, exp_name, cpu):
     else:
         # num_steps = 1e7
         # steps_per_epoch = 30000
-        num_steps = 1e5
-        steps_per_epoch = 1000
+        num_steps = 4e6
+        steps_per_epoch = 2e4
+
     epochs = int(num_steps / steps_per_epoch)
     save_freq = 5
     target_kl = 0.01
@@ -87,18 +94,6 @@ def main(robot, task, algo, seed, exp_name, cpu):
     algo = eval('safe_rl.'+algo)
     env_name = 'Safexp-'+robot+task+'-v0'
 
-    # algo(env_fn=lambda: gym.make(env_name),
-    #      ac_kwargs=dict(
-    #          hidden_sizes=(256, 256),
-    #         ),
-    #      epochs=epochs,
-    #      steps_per_epoch=steps_per_epoch,
-    #      save_freq=save_freq,
-    #      target_kl=target_kl,
-    #      cost_lim=cost_lim,
-    #      seed=seed,
-    #      logger_kwargs=logger_kwargs
-    #      )
     algo(env_fn=lambda: create_custom_env(env_name),
          ac_kwargs=dict(
              hidden_sizes=(256, 256),
