@@ -164,8 +164,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'lidar_exp_gain': 1.0, # Scaling factor for distance in exponential distance lidar
         'lidar_type': 'pseudo',  # 'pseudo', 'natural', see self.obs_lidar()
         'lidar_alias': True,  # Lidar bins alias into each other
-        'lidar_fov_factor': 1.0, ##fov = lidar_fov_factor * np.pi. Default is np.pi.
-        'lidar_fov_offset_factor': 0.5, ##starting angle for fov = lidar_fov_offset_factor * np.pi. Default is 0.
+        'lidar_fov_factor': 0.66, ##fov = lidar_fov_factor * np.pi. Default is 2pi/3.
+        'lidar_fov_offset_factor': 0.166, ##starting angle for fov = lidar_fov_offset_factor * np.pi. Default is pi/6.
 
         # Compass observation parameters
         'compass_shape': 2,  # Set to 2 or 3 for XY or XYZ unit vector compass observation.
@@ -206,6 +206,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'reward_exploration': False, # reward to encourage exploring
         'penalize_contact': False, # penalize contact with obstacles
         'observe_obstacle_distance': False, # Observe the least distance from any obstacle for reward
+        'avoid_pillar_in_view': False, # reward to avoid pillar in view
 
         # Threshold for monitoring obstacle distance
         'obstacle_distance_threshold': 0.2,
@@ -218,6 +219,12 @@ class Engine(gym.Env, gym.utils.EzPickle):
 
         # factor multiplied by distance to random goal to reward exploration
         'reward_exploration_factor': 0.18,
+
+        # threshold to be in vicinity of a pillar
+        'pillar_distance_threshold': 5.0,
+
+        # factor multipled by distance to pillar in view
+        'reward_pillar_avoidance': 0.2,
 
         # Buttons are small immovable spheres, to the environment
         'buttons_num': 0,  # Number of buttons to add
@@ -339,6 +346,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.obstacle_groups = [GROUP_WALL, GROUP_PILLAR, GROUP_HAZARD, GROUP_VASE, GROUP_GREMLIN]
         self.distance_to_random_goal = -1.0
         self.goal_not_seen = False
+        self.pillar_in_view = False
+        self.pillar_distances = None
 
     def parse(self, config):
         ''' Parse a config dict - see self.DEFAULT for description '''
@@ -1032,6 +1041,13 @@ class Engine(gym.Env, gym.utils.EzPickle):
             else:
                 self.goal_not_seen = False
 
+        if group == GROUP_PILLAR:
+            if np.any(obs != np.zeros(self.lidar_num_bins)):
+                self.pillar_in_view = True
+                self.pillar_distances = obs[np.nonzero(obs)]
+            else:
+                self.pillar_in_view = False
+
         return obs
 
     def obs_lidar_pseudo(self, positions):
@@ -1429,6 +1445,11 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 if self.constrain_gremlins and any(n.startswith('gremlin') for n in geom_names):
                     if any(n in self.robot.geom_names for n in geom_names):
                         reward -= (self.contact_penalty_scale * self.gremlins_contact_cost)
+        # Reward maximizing distance from pillar in view
+        if self.avoid_pillar_in_view:
+            if self.pillar_in_view:
+                for i in range(np.shape(self.pillar_distances)[0]):
+                    reward -= (self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
 
         # Clip reward
         if self.reward_clip:
