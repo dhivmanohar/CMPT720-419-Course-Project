@@ -1344,6 +1344,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
             self.last_least_obstacle_distance = self.curr_least_obstacle_distance
             # reset current_least_obstacle_distance to infinity
             self.curr_least_obstacle_distance = np.inf
+            # reset pillar distances to empty
+            self.pillar_distances = []
 
             # Goal processing
             if self.goal_met():
