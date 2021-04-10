@@ -164,8 +164,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'lidar_exp_gain': 1.0, # Scaling factor for distance in exponential distance lidar
         'lidar_type': 'pseudo',  # 'pseudo', 'natural', see self.obs_lidar()
         'lidar_alias': True,  # Lidar bins alias into each other
-        'lidar_fov_factor': 1.0, ##fov = lidar_fov_factor * np.pi. Default is np.pi.
-        'lidar_fov_offset_factor': 0.5, ##starting angle for fov = lidar_fov_offset_factor * np.pi. Default is 0.
+        'lidar_fov_factor': 0.66, ##fov = lidar_fov_factor * np.pi. Default is 2pi/3.
+        'lidar_fov_offset_factor': 0.166, ##starting angle for fov = lidar_fov_offset_factor * np.pi. Default is pi/6.
 
         # Compass observation parameters
         'compass_shape': 2,  # Set to 2 or 3 for XY or XYZ unit vector compass observation.
@@ -202,6 +202,29 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'reward_z': 1.0,  # Reward for standup tests (vel in z direction)
         'reward_circle': 1e-1,  # Reward for circle goal (complicated formula depending on pos and vel)
         'reward_clip': 10,  # Clip reward, last resort against physics errors causing magnitude spikes
+        'reward_obstacle_distance': 1.0, # reward multiplied by change in minimum distance to any given obstacle
+        'reward_exploration': False, # reward to encourage exploring
+        'penalize_contact': False, # penalize contact with obstacles
+        'observe_obstacle_distance': False, # Observe the least distance from any obstacle for reward
+        'avoid_pillar_in_view': False, # reward to avoid pillar in view
+
+        # Threshold for monitoring obstacle distance
+        'obstacle_distance_threshold': 0.2,
+
+        # Threshold on reward for moving away from obstacle
+        'obstacle_reward_threshold': 0.01,
+
+        # Scale the penalty for contact with obstacles
+        'contact_penalty_scale': 0.1,
+
+        # factor multiplied by distance to random goal to reward exploration
+        'reward_exploration_factor': 0.16, # 0.18
+
+        # threshold to be in vicinity of a pillar
+        'pillar_distance_threshold': 5.0,
+
+        # factor multipled by distance to pillar in view
+        'reward_pillar_avoidance': 0.12, # 0.2
 
         # Buttons are small immovable spheres, to the environment
         'buttons_num': 0,  # Number of buttons to add
@@ -317,6 +340,14 @@ class Engine(gym.Env, gym.utils.EzPickle):
 
         self.seed(self._seed)
         self.done = True
+
+        self.curr_least_obstacle_distance = self.obstacle_distance_threshold + 1.0 # np.inf
+        self.last_least_obstacle_distance = self.obstacle_distance_threshold + 1.0
+        self.obstacle_groups = [GROUP_WALL, GROUP_PILLAR, GROUP_HAZARD, GROUP_VASE, GROUP_GREMLIN]
+        self.distance_to_random_goal = -1.0
+        self.goal_not_seen = False
+        self.pillar_in_view = False
+        self.pillar_distances = None
 
     def parse(self, config):
         ''' Parse a config dict - see self.DEFAULT for description '''
@@ -978,12 +1009,14 @@ class Engine(gym.Env, gym.utils.EzPickle):
         Rays are circularly projected from the robot body origin
         around the robot z axis.
         '''
+        is_obstacle = (group in self.obstacle_groups)
         body = self.model.body_name2id('robot')
         grp = np.asarray([i == group for i in range(int(const.NGROUP))], dtype='uint8')
         pos = np.asarray(self.world.robot_pos(), dtype='float64')
         mat_t = self.world.robot_mat()
         obs = np.zeros(self.lidar_num_bins)
         starting_fov_angle = self.lidar_fov_offset_factor * np.pi
+        min_distance = np.inf
         for i in range(self.lidar_num_bins):
             # theta = (i / self.lidar_num_bins) * np.pi * 2
             theta = starting_fov_angle + ((i / self.lidar_num_bins) * np.pi * self.lidar_fov_factor)
@@ -992,6 +1025,29 @@ class Engine(gym.Env, gym.utils.EzPickle):
             dist, _ = self.sim.ray_fast_group(pos, vec, grp, 1, body)
             if dist >= 0:
                 obs[i] = np.exp(-dist)
+                if  is_obstacle and dist < min_distance:
+                    min_distance = dist
+
+        self.curr_least_obstacle_distance = min_distance
+
+        if group == GROUP_GOAL:
+            if np.all(obs == np.zeros(self.lidar_num_bins)):
+                self.goal_not_seen = True
+                curr_pos = self.world.robot_pos()
+                goal_pos = self.goal_pos
+                random_n = np.random.rand()
+                random_pos = goal_pos - np.array([random_n, -random_n, random_n])
+                self.distance_to_random_goal = self.dist_xy(random_pos)
+            else:
+                self.goal_not_seen = False
+
+        if group in self.obstacle_groups: #GROUP_PILLAR:
+            if np.any(obs != np.zeros(self.lidar_num_bins)):
+                self.pillar_in_view = True
+                self.pillar_distances = obs[np.nonzero(obs)]
+            else:
+                self.pillar_in_view = False
+
         return obs
 
     def obs_lidar_pseudo(self, positions):
@@ -1283,6 +1339,9 @@ class Engine(gym.Env, gym.utils.EzPickle):
             # Button timer (used to delay button resampling)
             self.buttons_timer_tick()
 
+            # set last_least_obstacle_distance to current_least_obstacle_distance
+            self.last_least_obstacle_distance = self.curr_least_obstacle_distance
+
             # Goal processing
             if self.goal_met():
                 info['goal_met'] = True
@@ -1310,6 +1369,9 @@ class Engine(gym.Env, gym.utils.EzPickle):
         if self.steps >= self.num_steps:
             self.done = True  # Maximum number of steps in an episode reached
 
+        if self.done: # reset the last least obstacle distance to negative
+            self.last_least_obstacle_distance = self.obstacle_distance_threshold + 1.0
+
         return self.obs(), reward, self.done, info
 
     def reward(self):
@@ -1320,28 +1382,6 @@ class Engine(gym.Env, gym.utils.EzPickle):
             dist_goal = self.dist_goal()
             reward += (self.last_dist_goal - dist_goal) * self.reward_distance
             self.last_dist_goal = dist_goal
-        # New reward for exploration
-        if self.task in ['goal', 'button']:
-            goal_lidar = self.obs_lidar([self.goal_pos], GROUP_GOAL)
-            if np.all(goal_lidar == np.zeros(self.lidar_num_bins)):
-            	curr_pos = self.world.robot_pos()
-            	goal_pos = self.goal_pos
-            	random_n = np.random.rand()
-            	random_pos = goal_pos - np.array([random_n, -random_n, random_n])
-            	dist = self.dist_xy(random_pos)
-            	#print(goal_pos)
-            	reward -= dist * 0.18
-        # New reward for pillar avoidance
-        if self.task in ['goal', 'button']:
-            pillar_lidar = self.obs_lidar(self.pillars_pos, GROUP_PILLAR)
-            if np.any(pillar_lidar != np.zeros(self.lidar_num_bins)):
-            	pillar_lidar_vals = pillar_lidar[np.nonzero(pillar_lidar)]
-            	#pillar_pos = self.pillars_pos
-            	#print(pillar_lidar)
-            	for i in range (np.shape(pillar_lidar_vals)[0]):
-            		reward -= (5 - pillar_lidar_vals[i]) * 0.2 
-            		# 5 is cutoff value, we aren't doing anything for pillars
-            		# further away from 5
         # Distance from robot to box
         if self.task == 'push':
             dist_box = self.dist_box()
@@ -1375,6 +1415,44 @@ class Engine(gym.Env, gym.utils.EzPickle):
         if self.reward_orientation:
             zalign = quat2zalign(self.data.get_body_xquat(self.reward_orientation_body))
             reward += self.reward_orientation_scale * zalign
+        # Reward maximizing the least distance to obstacle
+        if self.observe_obstacle_distance:
+            # print(self.last_least_obstacle_distance)
+            # print("hi")
+            if self.last_least_obstacle_distance <= self.obstacle_distance_threshold: # the agent is within the vicinity of an obstacle
+                # delta_distance will be negative if the agent has moved closer to obstacle(s)
+                delta_distance = self.curr_least_obstacle_distance - self.last_least_obstacle_distance
+                reward += min(self.reward_obstacle_distance * np.tanh(delta_distance), self.obstacle_reward_threshold)
+                # reward += self.reward_obstacle_distance * np.tanh(delta_distance)
+        # New reward for exploration
+        if self.reward_exploration:
+            if self.task in ['goal', 'button'] and self.goal_not_seen:
+                reward -= self.distance_to_random_goal * self.reward_exploration_factor
+        # Penalize contact with obstacles
+        if self.penalize_contact:
+            buttons_constraints_active = self.constrain_buttons and (self.buttons_timer == 0)
+            for contact in self.data.contact[:self.data.ncon]:
+                geom_ids = [contact.geom1, contact.geom2]
+                geom_names = sorted([self.model.geom_id2name(g) for g in geom_ids])
+                if self.constrain_vases and any(n.startswith('vase') for n in geom_names):
+                    if any(n in self.robot.geom_names for n in geom_names):
+                        reward -= (self.contact_penalty_scale * self.vases_contact_cost)
+                if self.constrain_pillars and any(n.startswith('pillar') for n in geom_names):
+                    if any(n in self.robot.geom_names for n in geom_names):
+                        reward -= (self.contact_penalty_scale * self.pillars_cost)
+                if buttons_constraints_active and any(n.startswith('button') for n in geom_names):
+                    if any(n in self.robot.geom_names for n in geom_names):
+                        if not any(n == f'button{self.goal_button}' for n in geom_names):
+                            reward -= (self.contact_penalty_scale * self.buttons_cost)
+                if self.constrain_gremlins and any(n.startswith('gremlin') for n in geom_names):
+                    if any(n in self.robot.geom_names for n in geom_names):
+                        reward -= (self.contact_penalty_scale * self.gremlins_contact_cost)
+        # Reward maximizing distance from pillar in view (now for obstacle group)
+        if self.avoid_pillar_in_view:
+            if self.pillar_in_view:
+                for i in range(np.shape(self.pillar_distances)[0]):
+                    reward -= max((self.pillar_distance_threshold - self.pillar_distances[i]), 0) * self.reward_pillar_avoidance 
+
         # Clip reward
         if self.reward_clip:
             in_range = reward < self.reward_clip and reward > -self.reward_clip
