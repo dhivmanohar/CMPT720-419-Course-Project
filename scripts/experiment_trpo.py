@@ -31,21 +31,30 @@ def create_custom_env(env_name):
         'constrain_indicator': False,
         'observe_goal_lidar': True,
         
+        ## Default rewards
         'reward_distance': 10.0,
         'reward_goal': 100.0,
-        'observe_obstacle_distance': True,
-        'reward_exploration': True,
-        'penalize_contact': True,
 
+        ## Default costs
         'pillars_cost': 10.0, 
         'gremlins_contact_cost': 10.0,
         'gremlins_dist_threshold': 0.1, 
         'gremlins_dist_cost': 5.0,
+
+        ## New reward flags
+        'observe_obstacle_distance': False,
+        'reward_exploration': True,
+        'penalize_contact': False,
+        'avoid_pillar_in_view': True, 
+
+        ## New reward parameters
         'reward_obstacle_distance': 0.1,
-        'obstacle_distance_threshold': 0.15,
+        'obstacle_distance_threshold': 1, 
         'obstacle_reward_threshold': 0.01,
         'contact_penalty_scale': 0.01,
-        'reward_exploration_factor': 0.18,
+        'reward_exploration_factor': 0.17, # Changed
+        'pillar_distance_threshold': 5.0,
+        'reward_pillar_avoidance': 0.08, # Changed
     }
 
     env = Engine(config)
@@ -75,10 +84,11 @@ def main(robot, task, algo, seed, exp_name, cpu):
     else:
         # num_steps = 1e7
         # steps_per_epoch = 30000
-        num_steps = 4e6
+        num_steps = 2e6
         steps_per_epoch = 2e4
 
     epochs = int(num_steps / steps_per_epoch)
+    #print("Epochs:", epochs)
     save_freq = 5
     target_kl = 0.01
     cost_lim = 25
