@@ -209,7 +209,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'avoid_pillar_in_view': False, # reward to avoid pillar in view
 
         # Threshold for monitoring obstacle distance
-        'obstacle_distance_threshold': 1.5,
+        'obstacle_distance_threshold': 0.2,
 
         # Threshold on reward for moving away from obstacle
         'obstacle_reward_threshold': 0.01,
@@ -341,14 +341,13 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.seed(self._seed)
         self.done = True
 
-        self.obstacle_groups = [GROUP_WALL, GROUP_PILLAR, GROUP_HAZARD, GROUP_VASE, GROUP_GREMLIN]
-
-        self.curr_least_obstacle_distance = np.inf
+        self.curr_least_obstacle_distance = self.obstacle_distance_threshold + 1.0 # np.inf
         self.last_least_obstacle_distance = self.obstacle_distance_threshold + 1.0
+        self.obstacle_groups = [GROUP_WALL, GROUP_PILLAR, GROUP_HAZARD, GROUP_VASE, GROUP_GREMLIN]
         self.distance_to_random_goal = -1.0
         self.goal_not_seen = False
         self.pillar_in_view = False
-        self.pillar_distances = []
+        self.pillar_distances = None
 
     def parse(self, config):
         ''' Parse a config dict - see self.DEFAULT for description '''
@@ -1029,7 +1028,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 if  is_obstacle and dist < min_distance:
                     min_distance = dist
 
-        self.curr_least_obstacle_distance = min(self.curr_least_obstacle_distance, min_distance)
+        self.curr_least_obstacle_distance = min_distance
 
         if group == GROUP_GOAL:
             if np.all(obs == np.zeros(self.lidar_num_bins)):
@@ -1042,10 +1041,10 @@ class Engine(gym.Env, gym.utils.EzPickle):
             else:
                 self.goal_not_seen = False
 
-        if group in self.obstacle_groups: #GROUP_PILLAR:
+        if group == GROUP_PILLAR:
             if np.any(obs != np.zeros(self.lidar_num_bins)):
                 self.pillar_in_view = True
-                self.pillar_distances.append(obs[np.nonzero(obs)])
+                self.pillar_distances = obs[np.nonzero(obs)]
             else:
                 self.pillar_in_view = False
 
@@ -1342,10 +1341,6 @@ class Engine(gym.Env, gym.utils.EzPickle):
 
             # set last_least_obstacle_distance to current_least_obstacle_distance
             self.last_least_obstacle_distance = self.curr_least_obstacle_distance
-            # reset current_least_obstacle_distance to infinity
-            self.curr_least_obstacle_distance = np.inf
-            # reset pillar distances to empty
-            self.pillar_distances = []
 
             # Goal processing
             if self.goal_met():
@@ -1374,13 +1369,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
         if self.steps >= self.num_steps:
             self.done = True  # Maximum number of steps in an episode reached
 
-        if self.done: # reset all tracking variables for rewards
-            self.curr_least_obstacle_distance = np.inf
+        if self.done: # reset the last least obstacle distance to negative
             self.last_least_obstacle_distance = self.obstacle_distance_threshold + 1.0
-            self.distance_to_random_goal = -1.0
-            self.goal_not_seen = False
-            self.pillar_in_view = False
-            self.pillar_distances = []
 
         return self.obs(), reward, self.done, info
 
@@ -1460,9 +1450,9 @@ class Engine(gym.Env, gym.utils.EzPickle):
         # Reward maximizing distance from pillar in view (now for obstacle group)
         if self.avoid_pillar_in_view:
             if self.pillar_in_view:
-                pillar_distances = np.concatenate(self.pillar_distances, axis=None)
-                for i in range(np.shape(pillar_distances)[0]):
-                    reward -= max((self.pillar_distance_threshold - pillar_distances[i]), 0) * self.reward_pillar_avoidance 
+                for i in range(np.shape(self.pillar_distances)[0]):
+                    #reward -= max((self.pillar_distance_threshold - self.pillar_distances[i]), 0) * self.reward_pillar_avoidance 
+                    reward -= np.tanh(self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
 
         # Clip reward
         if self.reward_clip:
