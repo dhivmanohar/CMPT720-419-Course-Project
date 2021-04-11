@@ -10,7 +10,59 @@ import numpy as np
 from safe_rl.utils.load_utils import load_policy
 from safe_rl.utils.logx import EpochLogger
 
-from experiment_trpo import create_custom_env
+def create_custom_env(env_name):
+    env = gym.make(env_name)
+    config = {
+        'robot_base': 'xmls/car.xml', ## TODO: change this to right xml file
+        'task': 'goal',
+        
+        'lidar_max_dist': 3,
+        'lidar_num_bins': 8,
+        'lidar_type': 'natural',
+        'lidar_fov_factor':0.66,
+        'lidar_fov_offset_factor':0.166, ## TODO: change this to appropriate value
+        
+        'pillars_num': 4,
+        'observe_pillars': True,
+        'constrain_pillars': True,
+        
+        'gremlins_num': 2,
+        'gremlins_travel': 0.8,
+        'observe_gremlins': True,
+        'constrain_gremlins': True,
+        
+        'constrain_indicator': False,
+        'observe_goal_lidar': True,
+        
+        ## Default rewards
+        'reward_distance': 10.0,
+        'reward_goal': 100.0,
+
+        ## Default costs
+        'pillars_cost': 10.0, 
+        'gremlins_contact_cost': 10.0,
+        'gremlins_dist_threshold': 0.1, 
+        'gremlins_dist_cost': 5.0,
+
+        # ## New reward flags
+        # 'observe_obstacle_distance': False,
+        # 'reward_exploration': True,
+        # 'penalize_contact': False,
+        # 'avoid_pillar_in_view': True, 
+
+        # ## New reward parameters
+        # 'reward_obstacle_distance': 0.1,
+        # 'obstacle_distance_threshold': 1, 
+        # 'obstacle_reward_threshold': 0.01,
+        # 'contact_penalty_scale': 0.01,
+        # 'reward_exploration_factor': 0.17, # Changed
+        # 'pillar_distance_threshold': 5.0,
+        # 'reward_pillar_avoidance': 0.08, # Changed
+    }
+
+    env = Engine(config)
+
+    return env
 
 def avoid_backward_action(action):
     ## if backward movement is initiated, stop the car
@@ -64,13 +116,13 @@ def load_policy(fpath, itr='last', deterministic=False):
     return env, get_action, sess
 
 
-def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
+def run_policy(env, get_action, output_dir=None, max_ep_len=None, num_episodes=100, render=True):
 
     assert env is not None, \
         "Environment not found!\n\n It looks like the environment wasn't saved, " + \
         "and we can't run the agent in it. :("
 
-    logger = EpochLogger()
+    logger = EpochLogger(output_dir=output_dir)
     o, r, d, ep_ret, ep_cost, ep_len, n = env.reset(), 0, False, 0, 0, 0, 0
     while n < num_episodes:
         if render:
@@ -100,6 +152,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('fpath', type=str)
+    parser.add_argument('--out', '-o', type=str, default='results')
     parser.add_argument('--len', '-l', type=int, default=0)
     parser.add_argument('--episodes', '-n', type=int, default=100)
     parser.add_argument('--norender', '-nr', action='store_true')
@@ -109,4 +162,7 @@ if __name__ == '__main__':
     env, get_action, sess = load_policy(args.fpath,
                                         args.itr if args.itr >=0 else 'last',
                                         args.deterministic)
-    run_policy(env, get_action, args.len, args.episodes, not(args.norender))
+    if not os.path.exists(args.out):
+        os.makedirs(args.out)
+
+    run_policy(env, get_action, args.out, args.len, args.episodes, not(args.norender))
