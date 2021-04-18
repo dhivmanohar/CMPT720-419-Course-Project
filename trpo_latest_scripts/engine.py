@@ -222,7 +222,10 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'reward_exploration_factor': 0.16, # 0.18
 
         # threshold to be in vicinity of a pillar
-        'pillar_distance_threshold': 5.0,
+        'pillar_distance_threshold': 0.3,
+
+        # threshold to be in vicinity of a pillar
+        'gremlin_distance_threshold': 0.3,
 
         # factor multipled by distance to pillar in view
         'reward_pillar_avoidance': 0.12, # 0.2
@@ -1469,14 +1472,17 @@ class Engine(gym.Env, gym.utils.EzPickle):
             if self.pillar_in_view:
                 for i in range(np.shape(self.pillar_distances)[0]):
                     #reward -= max((self.pillar_distance_threshold - self.pillar_distances[i]), 0) * self.reward_pillar_avoidance 
+                    #reward -= self.pillar_distances[i] * self.reward_pillar_avoidance ##### new and working
                     #reward -= np.tanh(self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
-                    reward -= self.pillar_distances[i] * self.reward_pillar_avoidance 
+                    reward += (self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
                     
         # Reward maximizing distance from gremlin in view
         if self.avoid_gremlin_in_view:
             if self.gremlin_in_view:
                 for i in range(np.shape(self.gremlin_distances)[0]):
-                    reward -= self.gremlin_distances[i] * self.reward_gremlin_avoidance 
+                    #reward -= self.gremlin_distances[i] * self.reward_gremlin_avoidance 
+                    #reward -= np.tanh(self.gremlin_distance_threshold - self.gremlin_distances[i]) * self.reward_gremlin_avoidance 
+                    reward += (self.gremlin_distance_threshold - self.gremlin_distances[i]) * self.reward_gremlin_avoidance 
 
         # Clip reward
         if self.reward_clip:
