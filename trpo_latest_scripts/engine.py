@@ -207,6 +207,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'penalize_contact': False, # penalize contact with obstacles
         'observe_obstacle_distance': False, # Observe the least distance from any obstacle for reward
         'avoid_pillar_in_view': False, # reward to avoid pillar in view
+        'avoid_gremlin_in_view': False, # reward to avoid gremlin in view
 
         # Threshold for monitoring obstacle distance
         'obstacle_distance_threshold': 0.2,
@@ -225,6 +226,9 @@ class Engine(gym.Env, gym.utils.EzPickle):
 
         # factor multipled by distance to pillar in view
         'reward_pillar_avoidance': 0.12, # 0.2
+
+        # factor multipled by distance to gremlin in view
+        'reward_gremlin_avoidance': 0.12, # 0.2
 
         # Buttons are small immovable spheres, to the environment
         'buttons_num': 0,  # Number of buttons to add
@@ -348,6 +352,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.goal_not_seen = False
         self.pillar_in_view = False
         self.pillar_distances = None
+        self.gremlin_in_view = False
+        self.gremlin_distances = None
 
     def parse(self, config):
         ''' Parse a config dict - see self.DEFAULT for description '''
@@ -1045,8 +1051,17 @@ class Engine(gym.Env, gym.utils.EzPickle):
             if np.any(obs != np.zeros(self.lidar_num_bins)):
                 self.pillar_in_view = True
                 self.pillar_distances = obs[np.nonzero(obs)]
+                #print(self.pillar_distances)
             else:
                 self.pillar_in_view = False
+
+        if group == GROUP_GREMLIN:
+            if np.any(obs != np.zeros(self.lidar_num_bins)):
+                self.gremlin_in_view = True
+                self.gremlin_distances = obs[np.nonzero(obs)]
+                #print(self.pillar_distances)
+            else:
+                self.gremlin_in_view = False
 
         return obs
 
@@ -1447,12 +1462,21 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 if self.constrain_gremlins and any(n.startswith('gremlin') for n in geom_names):
                     if any(n in self.robot.geom_names for n in geom_names):
                         reward -= (self.contact_penalty_scale * self.gremlins_contact_cost)
-        # Reward maximizing distance from pillar in view (now for obstacle group)
+                        
+        # Reward maximizing distance from pillar in view
         if self.avoid_pillar_in_view:
+            #print(self.obs_lidar(self.pillars_pos, GROUP_PILLAR))
             if self.pillar_in_view:
                 for i in range(np.shape(self.pillar_distances)[0]):
                     #reward -= max((self.pillar_distance_threshold - self.pillar_distances[i]), 0) * self.reward_pillar_avoidance 
-                    reward -= np.tanh(self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
+                    #reward -= np.tanh(self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
+                    reward -= self.pillar_distances[i] * self.reward_pillar_avoidance 
+                    
+        # Reward maximizing distance from gremlin in view
+        if self.avoid_gremlin_in_view:
+            if self.gremlin_in_view:
+                for i in range(np.shape(self.gremlin_distances)[0]):
+                    reward -= self.gremlin_distances[i] * self.reward_gremlin_avoidance 
 
         # Clip reward
         if self.reward_clip:
