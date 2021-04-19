@@ -46,7 +46,7 @@ def create_custom_env(env_name):
         'reward_exploration': True,
         'penalize_contact': False,
         'avoid_pillar_in_view': True, 
-        'avoid_gremlin_in_view': True, # New
+        'avoid_gremlin_in_view': False, # New
 
         ## New reward parameters
         'reward_obstacle_distance': 0.1,
