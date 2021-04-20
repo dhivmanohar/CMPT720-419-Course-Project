@@ -54,7 +54,7 @@ def create_custom_env(env_name):
         'obstacle_reward_threshold': 0.01,
         'contact_penalty_scale': 0.01,
         'reward_exploration_factor': 0.17, # Changed
-        'pillar_distance_threshold': 0.3, # Changed
+        'pillar_distance_threshold': 1.8, # 0.3, # Changed
         'gremlin_distance_threshold': 0.3, # New
         'reward_pillar_avoidance': 0.08, # Changed
         'reward_gremlin_avoidance': 0.03, # New

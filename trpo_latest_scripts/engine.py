@@ -1033,7 +1033,9 @@ class Engine(gym.Env, gym.utils.EzPickle):
             vec = np.asarray(vec, dtype='float64')
             dist, _ = self.sim.ray_fast_group(pos, vec, grp, 1, body)
             if dist >= 0:
-                obs[i] = np.exp(-dist)
+                #obs[i] = np.exp(-dist)
+                obs[i] = dist
+                #print(dist, obs[i])
                 if  is_obstacle and dist < min_distance:
                     min_distance = dist
 
@@ -1474,7 +1476,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
                     #reward -= max((self.pillar_distance_threshold - self.pillar_distances[i]), 0) * self.reward_pillar_avoidance 
                     #reward -= self.pillar_distances[i] * self.reward_pillar_avoidance ##### new and working
                     #reward -= np.tanh(self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
-                    reward += (self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
+                    #reward += (self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance ##### working
+                    reward -= max((self.pillar_distance_threshold - self.pillar_distances[i]), 0) * self.reward_pillar_avoidance
                     
         # Reward maximizing distance from gremlin in view
         if self.avoid_gremlin_in_view:
@@ -1482,7 +1485,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 for i in range(np.shape(self.gremlin_distances)[0]):
                     #reward -= self.gremlin_distances[i] * self.reward_gremlin_avoidance 
                     #reward -= np.tanh(self.gremlin_distance_threshold - self.gremlin_distances[i]) * self.reward_gremlin_avoidance 
-                    reward += (self.gremlin_distance_threshold - self.gremlin_distances[i]) * self.reward_gremlin_avoidance 
+                    reward += (self.gremlin_distance_threshold - self.gremlin_distances[i]) * self.reward_gremlin_avoidance ##### working
 
         # Clip reward
         if self.reward_clip:
