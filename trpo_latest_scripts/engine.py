@@ -491,6 +491,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 obs_space_dict['box_lidar'] = gym.spaces.Box(0.0, 1.0, (self.lidar_num_bins,), dtype=np.float32)
         if self.observe_goal_dist:
             obs_space_dict['goal_dist'] = gym.spaces.Box(0.0, 1.0, (1,), dtype=np.float32)
+        if self.observe_robot_pos:
+            obs_space_dict['robot_pos'] = gym.spaces.Box(-np.inf, np.inf, (3,), dtype=np.float32)
         if self.observe_goal_comp:
             obs_space_dict['goal_compass'] = gym.spaces.Box(-1.0, 1.0, (self.compass_shape,), dtype=np.float32)
         if self.observe_goal_lidar:
