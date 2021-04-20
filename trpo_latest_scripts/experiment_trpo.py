@@ -1,10 +1,9 @@
-#!/usr/bin/env python
+
 import gym 
 import safety_gym
 import safe_rl
 from safe_rl.utils.run_utils import setup_logger_kwargs
 from safe_rl.utils.mpi_tools import mpi_fork
-from gym.envs.registration import register
 from safety_gym.envs.engine import Engine
 import numpy as np
 
@@ -46,22 +45,25 @@ def create_custom_env(env_name):
         'observe_obstacle_distance': False,
         'reward_exploration': True,
         'penalize_contact': False,
-        'avoid_pillar_in_view': True,
+        'avoid_pillar_in_view': True, 
+        'avoid_gremlin_in_view': False, # New
 
-        # ## New reward parameters
+        ## New reward parameters
         'reward_obstacle_distance': 0.1,
-        'obstacle_distance_threshold': 1.5,
+        'obstacle_distance_threshold': 1, 
         'obstacle_reward_threshold': 0.01,
         'contact_penalty_scale': 0.01,
-        'reward_exploration_factor': 0.18,
-        'pillar_distance_threshold': 5.0, ## TODO: Change
-        'reward_pillar_avoidance': 0.2, ## TODO: Change
+        'reward_exploration_factor': 0.17, # Changed
+        'pillar_distance_threshold': 0.3, # Changed
+        'gremlin_distance_threshold': 0.3, # New
+        'reward_pillar_avoidance': 0.08, # Changed
+        'reward_gremlin_avoidance': 0.03, # New
     }
 
     env = Engine(config)
+    # env.action_space = gym.spaces.Discrete(3)
 
     return env
-
 
 def main(robot, task, algo, seed, exp_name, cpu):
 
@@ -85,9 +87,11 @@ def main(robot, task, algo, seed, exp_name, cpu):
     else:
         # num_steps = 1e7
         # steps_per_epoch = 30000
-        num_steps = 1e5
-        steps_per_epoch = 1000
+        num_steps = 2e6
+        steps_per_epoch = 2e4
+
     epochs = int(num_steps / steps_per_epoch)
+    #print("Epochs:", epochs)
     save_freq = 5
     target_kl = 0.01
     cost_lim = 25
@@ -103,18 +107,6 @@ def main(robot, task, algo, seed, exp_name, cpu):
     algo = eval('safe_rl.'+algo)
     env_name = 'Safexp-'+robot+task+'-v0'
 
-    # algo(env_fn=lambda: gym.make(env_name),
-    #      ac_kwargs=dict(
-    #          hidden_sizes=(256, 256),
-    #         ),
-    #      epochs=epochs,
-    #      steps_per_epoch=steps_per_epoch,
-    #      save_freq=save_freq,
-    #      target_kl=target_kl,
-    #      cost_lim=cost_lim,
-    #      seed=seed,
-    #      logger_kwargs=logger_kwargs
-    #      )
     algo(env_fn=lambda: create_custom_env(env_name),
          ac_kwargs=dict(
              hidden_sizes=(256, 256),
