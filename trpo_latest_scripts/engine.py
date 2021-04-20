@@ -112,6 +112,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'robot_base': 'xmls/car.xml',  # Which robot XML to use as the base
         'robot_rot': None,  # Override robot starting angle
 
+
         # Starting position distribution
         'randomize_layout': True,  # If false, set the random seed before layout to constant
         'build_resample': True,  # If true, rejection sample from valid environments
@@ -124,6 +125,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         # By default, only robot sensor observations are enabled.
         'observation_flatten': True,  # Flatten observation into a vector
         'observe_sensors': True,  # Observe all sensor data from simulator
+        'observe_robot_pos': True, #Observe robot position
         'observe_goal_dist': False,  # Observe the distance to the goal
         'observe_goal_comp': False,  # Observe a compass vector to the goal
         'observe_goal_lidar': False,  # Observe the goal with a lidar sensor
@@ -1127,6 +1129,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
 
         if self.observe_goal_dist:
             obs['goal_dist'] = np.array([np.exp(-self.dist_goal())])
+        if self.observe_robot_pos:
+            obs['robot_pos'] = np.array([self.world.robot_pos()])
         if self.observe_goal_comp:
             obs['goal_compass'] = self.obs_compass(self.goal_pos)
         if self.observe_goal_lidar:
