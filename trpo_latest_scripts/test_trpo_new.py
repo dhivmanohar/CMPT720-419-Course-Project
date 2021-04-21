@@ -50,7 +50,8 @@ def create_custom_env(env_name):
         'penalize_contact': False,
         'avoid_pillar_in_view': True, 
         'avoid_gremlin_in_view': False, # New
-
+        'gap_temp': True, # New
+        
         ## New reward parameters
         'reward_obstacle_distance': 0.1,
         'obstacle_distance_threshold': 1, 
@@ -58,9 +59,10 @@ def create_custom_env(env_name):
         'contact_penalty_scale': 0.01,
         'reward_exploration_factor': 0.17, # Changed
         'pillar_distance_threshold': 1.8, # 0.3, # Changed
-        'gremlin_distance_threshold': 0.3, # New
         'reward_pillar_avoidance': 0.08, # Changed
+        'gremlin_distance_threshold': 0.3, # New
         'reward_gremlin_avoidance': 0.03, # New
+        'reward_gap_factor': 0.11, # New
     }
 
     env = Engine(config)
