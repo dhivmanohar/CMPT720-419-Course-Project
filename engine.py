@@ -207,6 +207,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'penalize_contact': False, # penalize contact with obstacles
         'observe_obstacle_distance': False, # Observe the least distance from any obstacle for reward
         'avoid_pillar_in_view': False, # reward to avoid pillar in view
+        'avoid_gremlin_in_view': False, # reward to avoid gremlin in view
+        'gap_temp': False,
 
         # Threshold for monitoring obstacle distance
         'obstacle_distance_threshold': 0.2,
@@ -221,10 +223,19 @@ class Engine(gym.Env, gym.utils.EzPickle):
         'reward_exploration_factor': 0.16, # 0.18
 
         # threshold to be in vicinity of a pillar
-        'pillar_distance_threshold': 5.0,
+        'pillar_distance_threshold': 0.3,
+
+        # threshold to be in vicinity of a pillar
+        'gremlin_distance_threshold': 0.3,
 
         # factor multipled by distance to pillar in view
         'reward_pillar_avoidance': 0.12, # 0.2
+
+        # factor multipled by distance to gremlin in view
+        'reward_gremlin_avoidance': 0.12, # 0.2
+
+        # factor multiplied by distance to random goal to reward going through gap
+        'reward_gap_factor': 0.11, # 0.18
 
         # Buttons are small immovable spheres, to the environment
         'buttons_num': 0,  # Number of buttons to add
@@ -348,6 +359,15 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.goal_not_seen = False
         self.pillar_in_view = False
         self.pillar_distances = None
+        self.gremlin_in_view = False
+        self.gremlin_distances = None
+        
+        self.goal_observations = None
+        self.pillar_observations = None
+        self.gremlin_observations = None
+        
+        self.curr_robot_pos = None
+        self.last_robot_pos = None
 
     def parse(self, config):
         ''' Parse a config dict - see self.DEFAULT for description '''
@@ -1022,13 +1042,19 @@ class Engine(gym.Env, gym.utils.EzPickle):
             theta = starting_fov_angle + ((i / self.lidar_num_bins) * np.pi * self.lidar_fov_factor)
             vec = np.matmul(mat_t, theta2vec(theta))  # Rotate from ego to world frame
             vec = np.asarray(vec, dtype='float64')
+            
+            #print("bin ", vec)
+            #print("bot ", np.asarray(self.world.robot_pos(), dtype='float64'))
             dist, _ = self.sim.ray_fast_group(pos, vec, grp, 1, body)
             if dist >= 0:
-                obs[i] = np.exp(-dist)
+                #obs[i] = np.exp(-dist)
+                obs[i] = dist
+                #print(dist, obs[i])
                 if  is_obstacle and dist < min_distance:
                     min_distance = dist
 
         self.curr_least_obstacle_distance = min_distance
+        self.curr_robot_pos = np.asarray(self.world.robot_pos(), dtype='float64')
 
         if group == GROUP_GOAL:
             if np.all(obs == np.zeros(self.lidar_num_bins)):
@@ -1040,13 +1066,27 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 self.distance_to_random_goal = self.dist_xy(random_pos)
             else:
                 self.goal_not_seen = False
+                self.goal_observations = obs
 
         if group == GROUP_PILLAR:
             if np.any(obs != np.zeros(self.lidar_num_bins)):
                 self.pillar_in_view = True
                 self.pillar_distances = obs[np.nonzero(obs)]
+                
+                self.pillar_observations = obs
+                #print(self.pillar_distances)
             else:
                 self.pillar_in_view = False
+
+        if group == GROUP_GREMLIN:
+            if np.any(obs != np.zeros(self.lidar_num_bins)):
+                self.gremlin_in_view = True
+                self.gremlin_distances = obs[np.nonzero(obs)]
+                
+                self.gremlin_observations = obs
+                #print(self.pillar_distances)
+            else:
+                self.gremlin_in_view = False
 
         return obs
 
@@ -1342,6 +1382,9 @@ class Engine(gym.Env, gym.utils.EzPickle):
             # set last_least_obstacle_distance to current_least_obstacle_distance
             self.last_least_obstacle_distance = self.curr_least_obstacle_distance
 
+            # set last_least_obstacle_distance to current_least_obstacle_distance
+            self.last_robot_pos = self.curr_robot_pos
+
             # Goal processing
             if self.goal_met():
                 info['goal_met'] = True
@@ -1447,13 +1490,75 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 if self.constrain_gremlins and any(n.startswith('gremlin') for n in geom_names):
                     if any(n in self.robot.geom_names for n in geom_names):
                         reward -= (self.contact_penalty_scale * self.gremlins_contact_cost)
-        # Reward maximizing distance from pillar in view (now for obstacle group)
+                        
+        # Reward maximizing distance from pillar in view
         if self.avoid_pillar_in_view:
+            #print(self.obs_lidar(self.pillars_pos, GROUP_PILLAR))
             if self.pillar_in_view:
                 for i in range(np.shape(self.pillar_distances)[0]):
                     #reward -= max((self.pillar_distance_threshold - self.pillar_distances[i]), 0) * self.reward_pillar_avoidance 
-                    reward -= np.tanh(self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
+                    #reward -= self.pillar_distances[i] * self.reward_pillar_avoidance ##### new and working
+                    #reward -= np.tanh(self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance 
+                    #reward += (self.pillar_distance_threshold - self.pillar_distances[i]) * self.reward_pillar_avoidance ##### working
+                    reward -= max((self.pillar_distance_threshold - self.pillar_distances[i]), 0) * self.reward_pillar_avoidance
+                    
+        # Reward maximizing distance from gremlin in view
+        if self.avoid_gremlin_in_view:
+            if self.gremlin_in_view:
+                for i in range(np.shape(self.gremlin_distances)[0]):
+                    #reward -= self.gremlin_distances[i] * self.reward_gremlin_avoidance 
+                    #reward -= np.tanh(self.gremlin_distance_threshold - self.gremlin_distances[i]) * self.reward_gremlin_avoidance 
+                    reward += (self.gremlin_distance_threshold - self.gremlin_distances[i]) * self.reward_gremlin_avoidance ##### working
 
+        # Follow gap temp version
+        if self.gap_temp:
+            if not self.goal_not_seen:
+                bin_goal = np.nonzero(self.goal_observations)
+                bin_goal = bin_goal[0]
+                
+                bin_pillar = np.nonzero(self.pillar_observations)
+                bin_gremlin = np.nonzero(self.gremlin_observations)
+                
+                bin_obstacles = np.zeros(self.lidar_num_bins)
+                bin_obstacles[bin_pillar] = self.pillar_observations[bin_pillar]
+                bin_obstacles[bin_gremlin] = self.gremlin_observations[bin_gremlin]
+                #print(bin_obstacles)
+                #bin_obstacles = bin_obstacles[0]
+                
+                starting_fov_angle = self.lidar_fov_offset_factor * np.pi
+                mat_t = self.world.robot_mat()
+                
+                # O G _
+                if np.any(bin_obstacles != np.zeros(self.lidar_num_bins)) and (bin_goal[0]+1 not in bin_obstacles):
+                    theta_to_go = starting_fov_angle + ((bin_goal[0]+1 / self.lidar_num_bins) * np.pi * self.lidar_fov_factor)
+                    bin_vec = np.matmul(mat_t, theta2vec(theta_to_go))  # Rotate from ego to world frame
+                    bin_vec = np.asarray(bin_vec, dtype='float64')
+                    
+                    robot_vec = self.curr_robot_pos - self.last_robot_pos
+                    
+                    # ang_diff = np.abs(theta_robot_straight - theta_to_go)
+                    # print("bot ", robot_vec)
+                    # print("bin ", bin_vec)
+                    cos_sim = np.dot(robot_vec, bin_vec)/(np.linalg.norm(robot_vec)*np.linalg.norm(bin_vec))
+                    reward += cos_sim * self.reward_gap_factor
+                # _ G O
+                elif np.any(bin_obstacles != np.zeros(self.lidar_num_bins)) and (bin_goal[0]-1 not in bin_obstacles):
+                    theta_to_go = starting_fov_angle + ((bin_goal[0]-1 / self.lidar_num_bins) * np.pi * self.lidar_fov_factor)
+                    bin_vec = np.matmul(mat_t, theta2vec(theta_to_go))  # Rotate from ego to world frame
+                    bin_vec = np.asarray(bin_vec, dtype='float64')
+                    
+                    robot_vec = self.curr_robot_pos - self.last_robot_pos
+                    
+                    # ang_diff = np.abs(theta_robot_straight - theta_to_go)
+                    # print("bot ", robot_vec)
+                    # print("bin ", bin_vec)
+                    cos_sim = np.dot(robot_vec, bin_vec)/(np.linalg.norm(robot_vec)*np.linalg.norm(bin_vec))
+                    reward += cos_sim * self.reward_gap_factor
+                # O G O
+                #if bin_goal[0]-1 in bin_obstacles:
+                #    blah              
+            
+        
         # Clip reward
         if self.reward_clip:
             in_range = reward < self.reward_clip and reward > -self.reward_clip
