@@ -1565,14 +1565,24 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 # O G O
                 elif np.any(bin_obstacles != np.zeros(self.lidar_num_bins)):
                     target_bin = bin_goal[0]
-                    '''
-                    # Chooses the first free bin, not so optimal way
-                    for i in range (self.lidar_num_bins):
-                        if i == bin_goal[0]:
-                            continue
-                        if i not in bin_nos_obstacles:
-                            target_bin = i
-                            break
+                    
+                    # We want to choose a free bin farther away from the goal as possible, to avoid collision
+                    # If goal is in bins 4, 5, 6, 7, search from 0 to 7 ascending order
+                    if bin_goal[0] > 3:
+                        for i in range (self.lidar_num_bins):
+                            if i == bin_goal[0]:
+                                continue
+                            if i not in bin_nos_obstacles:
+                                target_bin = i
+                                break
+                    # If goal is in bins 0, 1, 2, 3, search from 7 to 0 descending order
+                    else:
+                        for i in range (self.lidar_num_bins-1, -1, -1):
+                            if i == bin_goal[0]:
+                                continue
+                            if i not in bin_nos_obstacles:
+                                target_bin = i
+                                break
                     '''
                     # Chooses closest free bin (left then right), so that bot has to turn less, goal is hopefully still in sight 
                     for i in range (bin_goal[0]-1, -1, -1):
@@ -1588,7 +1598,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
                             if i not in bin_nos_obstacles:
                                 target_bin = i
                                 break
-                    
+                    '''
                     # Only if we have some free bin will we reward going towards it
                     # If none of the bins are free, we're not rewarding anything, let the other rewards take over
                     if target_bin != bin_goal[0]:
