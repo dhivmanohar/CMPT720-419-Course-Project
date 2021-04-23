@@ -371,6 +371,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.curr_robot_pos = None
         self.last_robot_pos = None
 
+        self.path_marker = []
+
     def parse(self, config):
         ''' Parse a config dict - see self.DEFAULT for description '''
         self.config = deepcopy(self.DEFAULT)
@@ -931,6 +933,9 @@ class Engine(gym.Env, gym.utils.EzPickle):
         # Set the button timer to zero (so button is immediately visible)
         self.buttons_timer = 0
 
+        #reset path
+        self.path_marker = []
+
         self.clear()
         self.build()
         # Save the layout at reset
@@ -1417,6 +1422,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         if self.done: # reset the last least obstacle distance to negative
             self.last_least_obstacle_distance = self.obstacle_distance_threshold + 1.0
             self.last_robot_pos = None
+            self.path_marker = []
 
         return self.obs(), reward, self.done, info
 
@@ -1772,7 +1778,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
 
         # Add path marker
         if self.render_path_marker:
-            self.render_path.append(self.world.robot_pos())
+            self.path_marker.append(self.world.robot_pos())
             for i in range(len(self.path_marker)):
                 self.render_path(self.path_marker[i], 0.02, COLOR_BLACK, 'goal', alpha=1)
 
