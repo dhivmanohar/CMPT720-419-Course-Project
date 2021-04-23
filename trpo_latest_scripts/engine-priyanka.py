@@ -1772,7 +1772,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
 
         # Add path marker
         if self.render_path_marker:
-            self.path_marker.append(self.world.robot_pos())
+            self.render_path.append(self.world.robot_pos())
             for i in range(len(self.path_marker)):
                 self.render_path(self.path_marker[i], 0.02, COLOR_BLACK, 'goal', alpha=1)
 
