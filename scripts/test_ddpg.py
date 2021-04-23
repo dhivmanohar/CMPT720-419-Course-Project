@@ -41,24 +41,30 @@ def create_custom_env(env_name):
         'gremlins_contact_cost': 10.0,
         'gremlins_dist_threshold': 0.1, 
         'gremlins_dist_cost': 5.0,
-        
+
         ## New reward flags
         'observe_obstacle_distance': False,
         'reward_exploration': True,
         'penalize_contact': False,
         'avoid_pillar_in_view': True, 
-
+        'avoid_gremlin_in_view': False, # New
+        'gap_temp': True, # New
+        
         ## New reward parameters
         'reward_obstacle_distance': 0.1,
         'obstacle_distance_threshold': 1, 
         'obstacle_reward_threshold': 0.01,
         'contact_penalty_scale': 0.01,
         'reward_exploration_factor': 0.17, # Changed
-        'pillar_distance_threshold': 5.0,
-        'reward_pillar_avoidance': 0.08, # Changed
+        'pillar_distance_threshold': 1.8, # 0.3, # Changed
+        'reward_pillar_avoidance': 0.11, # Changed
+        'gremlin_distance_threshold': 0.3, # New
+        'reward_gremlin_avoidance': 0.03, # New
+        'reward_gap_factor': 0.13, # New
     }
 
     env = Engine(config)
+    # env.action_space = gym.spaces.Discrete(3)
 
     return env
 
@@ -152,4 +158,7 @@ if __name__ == '__main__':
     env, get_action, sess = load_policy(args.fpath,
                                         args.itr if args.itr >=0 else 'last',
                                         args.deterministic)
+    if not os.path.exists(args.out):
+        os.makedirs(args.out)
+    
     run_policy(env, get_action, args.out, args.len, args.episodes, not(args.norender))
