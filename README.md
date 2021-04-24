@@ -5,9 +5,20 @@ This repository contains models and scripts to run the research project for CMPT
 It is recommended to use Python 3.6.
 
 1) Install mujoco 
-2) Install safety-gym from [here](https://github.com/openai/safety-gym)
-3) Install safety-starter-agents from this repository
+2) Install safety-gym from [here](https://github.com/openai/safety-gym). Try importing it.
+3) Install safety-starter-agents by cloning this repository, then running
+
+`cd safety-starter-agents`
+
+`pip install -e .`
+
+Try importing it.
+
 4) Copy `engine.py` into `safety-gym/safety_gym/envs/`
+
+NOTE: If installing safety-starter-agents from this repository fails, it can also be installed from [here](https://github.com/openai/safety-starter-agents). After installation do the following:
+* Copy `experiment_trpo.py` and `test_trpo_new.py` from this repository into `safety-starter-agents/scripts/` 
+* Copy the folders `pg` and `ddpg` from this repository into `safety-starter-agents/safe_rl/` 
 
 ## Training
 The training code for Trust Region Policy Optimization (TRPO) is `experiment_trpo.py`.
