@@ -4,9 +4,9 @@ This repository contains models and scripts to run the research project for CMPT
 ## Set up instructions
 It is recommended to use Python 3.6.
 
-1) Install mujoco
-2) Install safety-gym
-3) Install safety-starter-agents from its repository
+1) Install mujoco 
+2) Install safety-gym from [here](https://github.com/openai/safety-gym)
+3) Install safety-starter-agents from this repository
 4) Copy `engine.py` into `safety-gym/safety_gym/envs/`
 
 ## Training
