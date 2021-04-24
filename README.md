@@ -14,7 +14,7 @@ It is recommended to use Python 3.6.
 
 Try importing it.
 
-4) Copy `engine.py` into `safety-gym/safety_gym/envs/`
+4) Copy `engine.py` from the `scripts` folder into `safety-gym/safety_gym/envs/`
 
 NOTE: If installing safety-starter-agents from this repository fails, it can also be installed from [here](https://github.com/openai/safety-starter-agents). After installation do the following:
 * Copy `experiment_trpo.py` and `test_trpo_new.py` from this repository into `safety-starter-agents/scripts/` 
