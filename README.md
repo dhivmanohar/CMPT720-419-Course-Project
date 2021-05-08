@@ -9,9 +9,6 @@ Our problem statement added certain constraints on the design of our custom envi
 * The LiDAR sensors on the robot must be limited to a 120&deg; Field of View towards the front end.
 * The robot can only move forward or turn sideways (left or right). Reverse movement is not allowed.
 
-### RL Algorithm ###
-We picked the widely used **Trust Region Policy Optimization(TRPO)** as our algorithm of choice. TRPO is an on-policy reinforcement learning algorithm that can be used for both discrete and continuous actions spaces.
-
 ### Reward Shaping ###
 #### Default Rewards ####
 *safety-gym* defines certain configuration attributes to reward approaching the goal:
@@ -21,8 +18,11 @@ We picked the widely used **Trust Region Policy Optimization(TRPO)** as our algo
 #### Custom Rewards ####
 We defined three custom rewards of our own:
 <p align="center">
-    <img src="./images/uml.jpeg">
+    <img src="./images/uml.jpeg" width="50%">
 </p>
+
+### RL Algorithm ###
+We picked the widely used **Trust Region Policy Optimization(TRPO)** as our algorithm of choice. TRPO is an on-policy reinforcement learning algorithm that can be used for both discrete and continuous actions spaces.
 
 ### Results ###
 <p align="center">
