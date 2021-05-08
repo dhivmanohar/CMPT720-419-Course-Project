@@ -3,16 +3,31 @@ We trained a *safety-gym* starter agent to navigate to a relative goal in an unk
 
 This repository is part of our course project for CMPT 720/419: Robotic Autonomy offered in Spring 2021 at Simon Fraser University.
 
+### Constraints ###
 Our problem statement added certain constraints on the design of our custom environment as well as the robot:
-1) The environment must have static as well as dynamic obstacles that the robot must learn to avoid.
-2) The LiDAR sensors on the robot must be limited to a 120&deg; Field of View towards the front end.
-3) The robot can only move forward or turn sideways (left or right). Reverse movement is not allowed.
+* The environment must have static as well as dynamic obstacles that the robot must learn to avoid.
+* The LiDAR sensors on the robot must be limited to a 120&deg; Field of View towards the front end.
+* The robot can only move forward or turn sideways (left or right). Reverse movement is not allowed.
 
-We picked the widely used Trust Region Policy Optimization (TRPO) as our algorithm of choice. TRPO is an on-policy reinforcement learning algorithm that can be used for both discrete and continuous actions spaces.
+### RL Algorithm ###
+We picked the widely used **Trust Region Policy Optimization(TRPO)** as our algorithm of choice. TRPO is an on-policy reinforcement learning algorithm that can be used for both discrete and continuous actions spaces.
 
+### Reward Shaping ###
+#### Default Rewards ####
+*safety-gym* defines certain configuration attributes to reward approaching the goal:
+* **reward_distance** rewards the robot for minimizing its distance to the goal. This is calculated at every time step and the reward is accumulated over the entire episode. We set its value to 10.0.
+* **reward_goal** rewards the robot for reaching the goal within a given episode. We set its value to 100.0.
+
+#### Custom Rewards ####
+We defined three custom rewards of our own:
 <p align="center">
-    <img src="./images/trpo_base.png" width="50%">
-    <img src="./images/trpo_custom.png" width="50%">
+    <img src="./images/uml.jpeg">
+</p>
+
+### Results ###
+<p align="center">
+    <img src="./images/trpo_base.png" width="40%">
+    <img src="./images/trpo_custom.png" width="40%">
 </p>
 <p align="center">
     <em>Path traversed by <em>safety-gym</em> starter agent trained using TRPO on default rewards(left) and <em>safety-gym</em> starter agent trained using TRPO on custom rewards(right). The agent trained on only default rewards tends to collide into pillars in its path to the goal(left). With custom rewards, the agent learns to avoid the pillar in its path as it moves towards the goal(right).</em>
@@ -20,8 +35,8 @@ We picked the widely used Trust Region Policy Optimization (TRPO) as our algorit
 
 ## Set up instructions
 It is recommended to use Python 3.6. You will need to install:
-1) [mujoco](http://www.mujoco.org/index.html).
-2) [safety-gym](https://github.com/openai/safety-gym).
+1) [mujoco](http://www.mujoco.org/index.html)
+2) [safety-gym](https://github.com/openai/safety-gym)
 
 Install *safety-starter-agents* by cloning this repository, then running
 ```
@@ -29,7 +44,7 @@ cd safety-starter-agents
 
 pip install -e
 ```
-NOTE: If installing safety-starter-agents from this repository fails, it can also be installed from [here](https://github.com/openai/safety-starter-agents).
+NOTE: If installing *safety-starter-agents* from this repository fails, it can also be installed from [here](https://github.com/openai/safety-starter-agents).
 
 Copy `engine.py` from the `scripts` folder into `safety-gym/safety_gym/envs/`
 
@@ -46,7 +61,7 @@ python experiment_trpo.py --robot car --task goal2 --algo trpo
 This will train and save the model in a new data folder in safety-starter-agents.
 
 ## Testing
-The testing code for Trust Region Policy Optimization (TRPO) is `test_trpo_new.py`.
+The testing code for Trust Region Policy Optimization (TRPO) is `test_trpo_new.py`. Run the following:
 ```
 cd safety-starter-agents/scripts
 python test_trpo_new.py <path/to/trained/model/folder>
